@@ -7,20 +7,12 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "postinstall": "sed -i '' \"s/domparser/domParser/\" node_modules/simplesvg/lib/compile.js 2>/dev/null || true"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "delaunator": "^3.0.2",
-    "ngraph.events": "^1.2.2",
-    "ngraph.forcelayout": "^1.0.1",
-    "ngraph.graph": "^19.1.0",
-    "ngraph.kruskal": "^1.0.0",
-    "ngraph.random": "^1.0.0",
-    "panzoom": "^9.2.4",
+    "cytoscape": "^3.33.1",
+    "cytoscape-fcose": "^2.2.0",
     "query-state": "^4.3.0",
-    "simplesvg": "^0.1.1",
-    "splaytree": "^2.0.3",
     "vue": "^2.7.16",
     "vuereddit": "^0.2.0"
   },

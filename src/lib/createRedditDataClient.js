@@ -3,16 +3,27 @@ export default function createDataClient(endpoint) {
   const sizes = new Map();
   // Cache of related subreddit arrays
   const relatedCache = new Map();
+  // Cache of detail info: { score, shared, commenters } per subreddit pair
+  const detailsCache = new Map(); // key: "parent|sub" → { score, shared, commenters }
 
   return {
     getRelated,
     getSuggestion,
-    getSize
+    getSize,
+    getDetails,
   }
 
   function getSize(subName) {
     let size = sizes.get(subName.toLowerCase());
     return size !== undefined ? size : 0.5;
+  }
+
+  /**
+   * Get detail info for a subreddit as related to a parent.
+   * Returns { score, shared, commenters } or null.
+   */
+  function getDetails(parentSub, subName) {
+    return detailsCache.get(parentSub.toLowerCase() + '|' + subName.toLowerCase()) || null;
   }
 
   function getRelated(query) {
@@ -29,6 +40,14 @@ export default function createDataClient(endpoint) {
         if (data.sizes) {
           Object.keys(data.sizes).forEach(name => {
             sizes.set(name.toLowerCase(), data.sizes[name]);
+          });
+        }
+
+        // Cache detail info (score, shared commenters, community size)
+        if (data.details) {
+          const parentKey = key;
+          Object.keys(data.details).forEach(name => {
+            detailsCache.set(parentKey + '|' + name.toLowerCase(), data.details[name]);
           });
         }
 

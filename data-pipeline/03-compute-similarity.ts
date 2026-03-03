@@ -1,7 +1,7 @@
 /**
  * Step 3: Compute Jaccard similarity between subreddits.
  * Ports the algorithm from scripts/index.js.
- * Output: results.json — array of { name, related: string[], commenterCount, sizeBucket }
+ * Output: results.json — array of { name, related: RelatedSub[], commenterCount, sizeBucket }
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
@@ -17,9 +17,15 @@ interface Interaction {
   count: number;
 }
 
+interface RelatedSub {
+  sub: string;
+  score: number;   // Jaccard similarity (0–1)
+  shared: number;  // # of shared commenters
+}
+
 interface SimilarityResult {
   name: string;
-  related: string[];
+  related: RelatedSub[];
   commenterCount: number;
   sizeBucket: number;
 }
@@ -102,15 +108,15 @@ function main() {
     const countA = commentersCount.get(subA) || 0;
     if (countA < 3) continue; // Skip tiny subs
 
-    const similarities: { sub: string; score: number }[] = [];
+    const similarities: { sub: string; score: number; shared: number }[] = [];
 
-    for (const [subB, shared] of neighbors) {
+    for (const [subB, sharedCount] of neighbors) {
       const countB = commentersCount.get(subB) || 0;
       if (countB < 3) continue;
 
       // Jaccard similarity: |A ∩ B| / |A ∪ B|
-      const jaccard = shared / (countA + countB - shared);
-      similarities.push({ sub: subB, score: jaccard });
+      const jaccard = sharedCount / (countA + countB - sharedCount);
+      similarities.push({ sub: subB, score: jaccard, shared: sharedCount });
     }
 
     // Sort by score descending, take top 100
@@ -132,10 +138,10 @@ function main() {
     const medianIndex = Math.floor(top100.length / 2);
     const median = top100[medianIndex].score;
 
-    const filtered: string[] = [];
+    const filtered: RelatedSub[] = [];
     for (const sim of top100) {
       if (sim.score - median > stdDev) {
-        filtered.push(sim.sub);
+        filtered.push({ sub: sim.sub, score: sim.score, shared: sim.shared });
       } else {
         break; // Array is sorted, nothing interesting left
       }
@@ -146,9 +152,10 @@ function main() {
     // Size bucket: log scale (matches original)
     const sizeBucket = Math.max(0, Math.round(Math.log(countA)) - 2);
 
+    // Index 0 = self (parent), rest = related subs sorted by similarity
     results.push({
       name: subA,
-      related: [subA, ...filtered], // Index 0 = parent (matches buildGraph.js expectation)
+      related: [{ sub: subA, score: 1, shared: countA }, ...filtered],
       commenterCount: countA,
       sizeBucket,
     });
@@ -166,11 +173,17 @@ function main() {
   // Print some stats
   const airtable = results.find((r) => r.name === "Airtable");
   if (airtable) {
-    console.log(`\nAirtable related (${airtable.related.length}):`, airtable.related.slice(0, 10));
+    console.log(`\nAirtable related (${airtable.related.length}):`);
+    airtable.related.slice(0, 6).forEach((r) =>
+      console.log(`  ${r.sub}: ${(r.score * 100).toFixed(1)}% similar, ${r.shared} shared`)
+    );
   }
   const aiAgents = results.find((r) => r.name === "AI_Agents");
   if (aiAgents) {
-    console.log(`AI_Agents related (${aiAgents.related.length}):`, aiAgents.related.slice(0, 10));
+    console.log(`AI_Agents related (${aiAgents.related.length}):`);
+    aiAgents.related.slice(0, 6).forEach((r) =>
+      console.log(`  ${r.sub}: ${(r.score * 100).toFixed(1)}% similar, ${r.shared} shared`)
+    );
   }
 }
 

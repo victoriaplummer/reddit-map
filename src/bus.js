@@ -1,4 +1,7 @@
-import eventify from 'ngraph.events';
-const bus = eventify({});
+const bus = new EventTarget();
 
-export default bus;
+export default {
+  on(event, fn)   { bus.addEventListener(event, fn); },
+  off(event, fn)  { bus.removeEventListener(event, fn); },
+  fire(event, detail) { bus.dispatchEvent(new CustomEvent(event, { detail })); }
+};

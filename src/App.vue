@@ -1,7 +1,6 @@
 <template>
   <div id="app">
     <form v-on:submit.prevent="onSubmit" class="search-box">
-      <!-- <input class='search-input' type="text" v-model='appState.query' placeholder='Enter query' autofocus> -->
       <typeahead
         placeholder="Enter subreddit name"
         ref:typeahead
@@ -10,7 +9,38 @@
         :get-suggestions="getSuggestions"
       ></typeahead>
     </form>
-    <div class="help" v-if="!isLoading">
+
+    <div class="settings-toggle" @click="settingsOpen = !settingsOpen">
+      <span class="settings-icon">&#9881;</span>
+      <span>{{ settingsOpen ? 'Hide settings' : 'Settings' }}</span>
+    </div>
+
+    <div class="settings-pane" v-if="settingsOpen">
+      <label class="setting-row">
+        <span class="setting-label">Depth</span>
+        <input type="range" min="1" max="3" step="1"
+          :value="graphSettings.initialDepth"
+          @input="onSettingChange('initialDepth', Number($event.target.value))">
+        <span class="setting-value">{{ graphSettings.initialDepth }}</span>
+      </label>
+      <label class="setting-row">
+        <span class="setting-label">Edge cutoff</span>
+        <input type="range" min="1" max="5" step="0.5"
+          :value="graphSettings.edgeWeightCutoff"
+          @input="onSettingChange('edgeWeightCutoff', Number($event.target.value))">
+        <span class="setting-value">{{ graphSettings.edgeWeightCutoff }}</span>
+      </label>
+      <label class="setting-row">
+        <span class="setting-label">Drag pull</span>
+        <input type="range" min="0" max="1" step="0.05"
+          :value="graphSettings.dragPullStrength"
+          @input="onSettingChange('dragPullStrength', Number($event.target.value))">
+        <span class="setting-value">{{ graphSettings.dragPullStrength.toFixed(2) }}</span>
+      </label>
+      <button class="settings-apply" @click="rerender">Apply &amp; re-render</button>
+    </div>
+
+    <div class="help" v-if="!appState.hasGraph">
       The graph of related subreddits
       <a
         href="#"
@@ -18,7 +48,7 @@
         class="highlight"
       >Learn more.</a>
     </div>
-    <div class="help" v-if="isLoading">{{appState.progress.message}}</div>
+    <div class="help" v-if="loading">Loading...</div>
     <div class="about-line">
       <a class="about-link" href="#" @click.prevent="aboutVisible = true">about</a>
       <a class="bold" href="https://github.com/anvaka/sayit">source code</a>
@@ -39,7 +69,7 @@
       </p>
     </div>
 
-    <div class="tooltip" ref="tooltip">{{tooltip.text}}</div>
+    <div class="tooltip" ref="tooltip" :class="{ visible: tooltip.visible }" v-html="tooltip.html"></div>
     <subreddit v-if="subreddit" :name="subreddit" class="preview"></subreddit>
     <div class="close-container" v-if="subreddit">
       <a href="#" @click.prevent="subreddit = null">close</a>
@@ -50,9 +80,9 @@
 <script>
 import "vuereddit/dist/vuereddit.css";
 
-import appState, { performSearch } from "./appState.js";
+import appState, { setQuery } from "./appState.js";
 import Subreddit from "vuereddit";
-import createRenderer from "./lib/createRenderer";
+import cytoscapeGraph from "./lib/cytoscapeGraph";
 import About from "./components/About";
 import Typeahead from "./components/Typeahead";
 import bus from "./bus";
@@ -64,11 +94,13 @@ export default {
     return {
       aboutVisible: false,
       subreddit: null,
+      loading: false,
+      settingsOpen: false,
       appState,
+      graphSettings: cytoscapeGraph.getSettings(),
       tooltip: {
-        text: "",
-        x: "",
-        y: ""
+        html: "",
+        visible: false,
       }
     };
   },
@@ -77,44 +109,73 @@ export default {
     Typeahead,
     Subreddit
   },
-  computed: {
-    isLoading() {
-      return appState.progress.working;
-    }
-  },
   methods: {
     doSearch(q) {
-      appState.query = q;
+      // q may be a string (from Typeahead) or CustomEvent (from bus)
+      const query = (q && q.detail) ? q.detail : q;
+      appState.query = query;
       this.onSubmit();
     },
     getSuggestions(input) {
       return redditDataClient.getSuggestion(input);
     },
-    onSubmit() {
+    async onSubmit() {
       if (!appState.query) return;
 
-      performSearch(appState.query);
-      this.renderer.render(appState.graph);
+      setQuery(appState.query);
+      this.loading = true;
+      await cytoscapeGraph.renderSearch(appState.query);
+      this.loading = false;
+
       const el = document.querySelector(":focus");
       if (el) el.blur();
     },
-    showSubreddit(name) {
-      this.subreddit = name;
-    }
+    showSubreddit(e) {
+      this.subreddit = e.detail;
+    },
+    showTooltip(e) {
+      const data = e.detail;
+      const tooltipEl = this.$refs.tooltip;
+      if (tooltipEl) {
+        tooltipEl.style.left = (data.x + 15) + 'px';
+        tooltipEl.style.top = (data.y - 10) + 'px';
+      }
+      this.tooltip.html = data.html || data.text || '';
+      this.tooltip.visible = true;
+    },
+    hideTooltip() {
+      this.tooltip.visible = false;
+    },
+    onSettingChange(key, value) {
+      this.graphSettings[key] = value;
+      cytoscapeGraph.updateSettings({ [key]: value });
+    },
+    async rerender() {
+      if (!appState.query) return;
+      this.loading = true;
+      await cytoscapeGraph.renderSearch(appState.query);
+      this.loading = false;
+    },
   },
   mounted() {
-    this.renderer = createRenderer(appState.progress);
-    bus.on("show-subreddit", this.showSubreddit);
-    bus.on("new-search", this.doSearch);
+    cytoscapeGraph.init('cy');
 
-    if (appState.graph) {
-      this.renderer.render(appState.graph);
+    bus.on('show-subreddit', this.showSubreddit);
+    bus.on('new-search', this.doSearch);
+    bus.on('show-tooltip', this.showTooltip);
+    bus.on('hide-tooltip', this.hideTooltip);
+
+    if (appState.query) {
+      this.onSubmit();
     }
   },
 
   beforeDestroy() {
-    bus.off("show-subreddit", this.showSubreddit);
-    bus.off("new-search", this.doSearch);
+    bus.off('show-subreddit', this.showSubreddit);
+    bus.off('new-search', this.doSearch);
+    bus.off('show-tooltip', this.showTooltip);
+    bus.off('hide-tooltip', this.hideTooltip);
+    cytoscapeGraph.destroy();
   }
 };
 </script>
@@ -152,16 +213,91 @@ export default {
   color: highlight-color;
 }
 
-rect, path, text {
-  transition: stroke 200ms, fill 200ms;
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: secondary-color;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+
+  &:hover {
+    color: highlight-color;
+  }
 }
 
-.hovered rect, path.hovered {
-  stroke: highlight-color;
+.settings-icon {
+  font-size: 14px;
 }
 
-.hovered rect {
-  stroke: highlight-color;
+.settings-pane {
+  background: background-color;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #555;
+  margin: 4px 0;
+  cursor: default;
+}
+
+.setting-label {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.setting-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ddd;
+  border-radius: 2px;
+  outline: none;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: highlight-color;
+    cursor: pointer;
+  }
+}
+
+.setting-value {
+  width: 32px;
+  text-align: right;
+  font-family: monospace;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.settings-apply {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  background: highlight-color;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
 }
 
 .help {
@@ -180,10 +316,6 @@ rect, path, text {
 
 a {
   text-decoration: none;
-}
-
-.age-warning {
-  margin-top: 62px
 }
 
 .about-line {
@@ -213,19 +345,104 @@ a {
 }
 
 .tooltip {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 -1px 0px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
   position: fixed;
   background: background-color;
-  padding: 8px;
-  border: 1px solid border-color;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
   pointer-events: none;
   opacity: 0;
-  transition-duration: 300ms;
-  transition-property: opacity;
+  transition: opacity 150ms ease;
+  z-index: 10;
+  max-width: 280px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #555;
 }
 
 .tooltip.visible {
   opacity: 1;
+}
+
+.tt-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: primary-text;
+  margin-bottom: 6px;
+}
+
+.tt-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.tt-stat {
+  white-space: nowrap;
+}
+
+.tt-num {
+  font-weight: 600;
+  color: primary-text;
+}
+
+.tt-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ccc;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tt-similarity {
+  margin-bottom: 8px;
+}
+
+.tt-bar-track {
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+
+.tt-bar-fill {
+  height: 100%;
+  background: highlight-color;
+  border-radius: 2px;
+  transition: width 200ms ease;
+}
+
+.tt-pct {
+  font-size: 11px;
+  color: #888;
+}
+
+.tt-connected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #eee;
+}
+
+.tt-tag {
+  background: #f3f3f3;
+  color: #555;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.tt-more {
+  color: #aaa;
+  font-size: 10px;
+  padding: 1px 4px;
 }
 
 .search-box {
@@ -297,10 +514,6 @@ a {
   }
 }
 
-g.node {
-  cursor: pointer;
-}
-
 .details-container {
   position: absolute;
   top: 82px;
@@ -309,10 +522,6 @@ g.node {
   right: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.read-more {
-  linear-gradient(180deg, rgba(255, 255, 255, 0), #fff);
 }
 
 @media (max-height: 550px) {

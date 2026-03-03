@@ -11,9 +11,15 @@ import { createServer } from "http";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+interface RelatedSub {
+  sub: string;
+  score: number;
+  shared: number;
+}
+
 interface SubResult {
   name: string;
-  related: string[];
+  related: RelatedSub[];
   commenterCount: number;
   sizeBucket: number;
 }
@@ -52,15 +58,26 @@ const server = createServer((req, res) => {
     if (!sub) return send(res, 400, { error: "Missing 'sub' parameter" });
 
     const row = byNameLower.get(sub.toLowerCase());
-    if (!row) return send(res, 200, { related: [], sizes: {} });
+    if (!row) return send(res, 200, { related: [], sizes: {}, details: {} });
 
     const sizes: Record<string, number> = {};
-    for (const name of row.related) {
-      const r = byNameLower.get(name.toLowerCase());
-      sizes[name] = r ? r.sizeBucket / maxBucket : 0.5;
+    const details: Record<string, { score: number; shared: number; commenters: number }> = {};
+
+    for (const rel of row.related) {
+      const r = byNameLower.get(rel.sub.toLowerCase());
+      sizes[rel.sub] = r ? r.sizeBucket / maxBucket : 0.5;
+      details[rel.sub] = {
+        score: rel.score,
+        shared: rel.shared,
+        commenters: r ? r.commenterCount : 0,
+      };
     }
 
-    return send(res, 200, { related: row.related, sizes });
+    return send(res, 200, {
+      related: row.related.map((r) => r.sub),
+      sizes,
+      details,
+    });
   }
 
   if (path === "/api/suggestions") {

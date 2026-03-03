@@ -9,15 +9,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'ngraph.graph',
-      'ngraph.events',
-      'ngraph.forcelayout',
-      'ngraph.random',
-      'ngraph.kruskal',
-      'panzoom',
-      'simplesvg',
+      'cytoscape',
+      'cytoscape-fcose',
       'query-state',
-      'splaytree',
     ],
   },
 });
