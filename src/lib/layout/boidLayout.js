@@ -1,5 +1,5 @@
 import {Flock, Boid} from './flock';
-let createRandom = require('ngraph.random');
+import createRandom from 'ngraph.random';
 
 export default function createFakeLayout(graph) {
   let nodes = new Map();

@@ -1,5 +1,6 @@
 import bus from '../bus';
 import redditDataClient from './redditDataClient';
+import createGraph from 'ngraph.graph';
 
 export default function buildGraph(entryWord, MAX_DEPTH, progress) {
   entryWord = entryWord && entryWord.trim();
@@ -9,7 +10,7 @@ export default function buildGraph(entryWord, MAX_DEPTH, progress) {
 
   let cancelled = false;
   let pendingResponse;
-  let graph = require('ngraph.graph')();
+  let graph = createGraph();
   graph.maxDepth = MAX_DEPTH;
   let queue = [];
   let requestDelay = 0;

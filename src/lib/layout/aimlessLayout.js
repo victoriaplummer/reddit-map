@@ -1,4 +1,5 @@
-const random = require('ngraph.random')(42);
+import createRandom from 'ngraph.random';
+const random = createRandom(42);
 
 export default function aimlessLayout(graph) {
   const nodes = new Map();

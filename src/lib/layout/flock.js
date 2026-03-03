@@ -2,7 +2,8 @@ import { Vector } from './Vector';
 
 // https://processing.org/examples/flocking.html
 
-var random = require('ngraph.random')(45);
+import createRandom from 'ngraph.random';
+var random = createRandom(45);
 
 export class Flock {
   constructor(graph) {

@@ -3,9 +3,8 @@ import createInterpolateLayout from './createInterpolateLayout';
 import removeOverlaps from './layout/removeOverlaps';
 import Rect from './layout/Rect';
 
-let eventify = require('ngraph.events');
-
-let createLayout = require('ngraph.forcelayout')
+import eventify from 'ngraph.events';
+import createLayout from 'ngraph.forcelayout';
 const USE_FAKE = 1;
 const USE_INTERPOLATE = 2;
 const REMOVE_OVERLAPS = 3;

@@ -4,7 +4,7 @@ import createAggregateLayout from './aggregateLayout';
 import bus from '../bus';
 import createLinkAnimator from './renderer/linkAnimator';
 
-let svg = require('simplesvg');
+import svg from 'simplesvg';
 
 export default function createRenderer(progress) {
   const scene = document.querySelector('#scene');

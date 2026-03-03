@@ -5,15 +5,14 @@
   "author": "Andrei Kashcha",
   "private": true,
   "scripts": {
-    "start": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "postinstall": "sed -i '' \"s/domparser/domParser/\" node_modules/simplesvg/lib/compile.js 2>/dev/null || true"
   },
   "dependencies": {
-    "core-js": "^3.6.5",
     "delaunator": "^3.0.2",
-    "fuse.js": "^3.3.0",
-    "fuzzysort": "^1.1.4",
-    "ngraph.events": "0.0.4",
+    "ngraph.events": "^1.2.2",
     "ngraph.forcelayout": "^1.0.1",
     "ngraph.graph": "^19.1.0",
     "ngraph.kruskal": "^1.0.0",
@@ -22,38 +21,13 @@
     "query-state": "^4.3.0",
     "simplesvg": "^0.1.1",
     "splaytree": "^2.0.3",
-    "vue": "^2.6.11",
+    "vue": "^2.7.16",
     "vuereddit": "^0.2.0"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "~4.5.0",
-    "@vue/cli-plugin-eslint": "~4.5.0",
-    "@vue/cli-service": "~4.5.0",
-    "babel-eslint": "^10.1.0",
-    "eslint": "^6.7.2",
-    "eslint-plugin-vue": "^6.2.2",
-    "postcss-loader": "^5.3.0",
-    "stylus": "^0.54.8",
-    "stylus-loader": "^3.0.2",
-    "vue-template-compiler": "^2.6.11"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "babel-eslint"
-    },
-    "rules": {}
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 8"
-  ]
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@vitejs/plugin-vue2": "^2.3.0",
+    "stylus": "^0.63.0",
+    "vite": "^5.4.0"
+  }
 }

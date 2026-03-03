@@ -1,6 +1,6 @@
 import BBox from './BBox';
 
-const createRandom = require('ngraph.random');
+import createRandom from 'ngraph.random';
 
 export default function createNBLayout(graph) {
   let nodes = new Map();

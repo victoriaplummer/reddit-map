@@ -1,3 +1,4 @@
-const bus = require('ngraph.events')({});
+import eventify from 'ngraph.events';
+const bus = eventify({});
 
 export default bus;

@@ -1,9 +1,9 @@
 import createRedditDataClient from "./createRedditDataClient";
 
-const isProd = true;
+const isProd = false;
 const dataEndpoint = isProd
-  ? "https://anvaka.github.io/sayit-data/3/"
-  : "http://localhost:8081/";
+  ? "https://sayit-api.YOUR_SUBDOMAIN.workers.dev"
+  : "http://localhost:8787";
 const redditDataClient = createRedditDataClient(dataEndpoint);
 
 export default redditDataClient;

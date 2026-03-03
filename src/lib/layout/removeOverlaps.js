@@ -1,7 +1,7 @@
 import findMinimumSpanningTree from 'ngraph.kruskal';
 import getDelaunayGraph from './getDelaunayGraph';
 import makeSpanningTree from './makeSpanningTree';
-var randomAPI = require('ngraph.random');
+import randomAPI from 'ngraph.random';
 
 class EdgeModel {
   constructor (from, to) {

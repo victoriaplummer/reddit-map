@@ -1,9 +1,10 @@
 /**
  * A simple utility which animates links into appearance.
  */
-let svg = require('simplesvg');
-let random = require('ngraph.random')(42);
-let eventify = require('ngraph.events');
+import svg from 'simplesvg';
+import createRandom from 'ngraph.random';
+import eventify from 'ngraph.events';
+let random = createRandom(42);
 
 export default function createLinkAnimator(graph, layout, edgeContainer) {
   /**

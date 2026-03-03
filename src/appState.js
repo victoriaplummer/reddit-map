@@ -1,7 +1,7 @@
 import buildGraph from './lib/buildGraph';
 import Progress from './Progress';
 
-const queryState = require('query-state');
+import queryState from 'query-state';
 
 const qs = queryState(
   {
@@ -45,6 +45,6 @@ export function performSearch(queryString) {
 
   lastBuilder = buildGraph(queryString, appState.maxDepth, appState.progress);
   lastBuilder.graph.rootId = queryString;
-  appState.graph = Object.freeze(lastBuilder.graph);
+  appState.graph = lastBuilder.graph;
   return lastBuilder.graph;
 }
